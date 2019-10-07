@@ -1,12 +1,15 @@
 import os, json
-from flask import render_template
+from flask import render_template, send_from_directory
 from app import app
 
 # HISTORY_FOLDER = '/Users/kevinwang/Desktop/test_histories/'
 HISTORY_FOLDER = '/Users/kevinwang/Desktop/tiger_history/'
 
+@app.route('/download/<path:filename>')
+def download(filename):
+    return send_from_directory(HISTORY_FOLDER, filename)
+
 @app.route('/')
-@app.route('/index')
 def index():
     '''
     rows should have
@@ -34,6 +37,7 @@ def index():
             'timestamp': _timestamp,
             'type': _type,
             'predicates': _predicates,
+            'filename': path,
         }
         rows.append(row)
     return render_template('index.html', rows=rows)
