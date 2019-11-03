@@ -69,8 +69,17 @@
     <br>
     <br>
     <br>
+    <form> 
+      Select a parameter to plot time-series: 
+      <select id='select_plot' onchange='plotDataHelper()'>
+        <option>true positive</option>
+        <option>false negative</option>
+        <option>precision</option>
+        <option>recall</option>
+        <option>pass rate</option>
+      </select>
+    </form>
     <div id="history_plots">
-
     </div>
   </body>
 <script>
@@ -108,12 +117,12 @@ function sum(s1, s2) {
   }
 }
 
-function plot_data(data, xfn, yfn) {
-  // svg.append("text")
-  //       .attr("x", (width / 2))             
-  //       .attr("y", 0 - (margin.top / 2))
-  //       .attr("text-anchor", "middle")  
-  //       .text(xaxis + " v. " + yaxis);
+function plot_data(data, xfn, yfn, xlabel, ylabel) {
+  svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")  
+        .text(xlabel + " v. " + ylabel);
 
   // Add X axis --> it is a date format
   var x = d3.scaleTime()
@@ -130,6 +139,14 @@ function plot_data(data, xfn, yfn) {
   svg.append("g")
     .call(d3.axisLeft(y));
 
+    // text label for the x axis
+  svg.append("text")             
+      .attr("transform",
+            "translate(" + (width/2) + " ," + 
+                           (height + margin.top + 20) + ")")
+      .style("text-anchor", "middle")
+      .text("Date");
+
   // Add the line
   svg.append("path")
     .datum(data)
@@ -142,14 +159,34 @@ function plot_data(data, xfn, yfn) {
     );
 }
 
-// plot_data(data, id('arrival_time'), id('TruePositive'));
-// precision
-// plot_data(data, id('arrival_time'), div(id('TruePositive'), id('Passed')));
-// recall
-// plot_data(data, id('arrival_time'), div(id('TruePositive'), sum(id('TruePositive'), id('FalseNegative'))));
-// pass rate
-plot_data(data, id('arrival_time'), div(id('Passed'), id('Searched')))
+// default
+plot_data(data, id('arrival_time'), id('TruePositive'), 'Time', 'TruePositive');
 
+function plotDataHelper() {
+  svg.selectAll('*').remove();
+  var mylist = document.getElementById('select_plot')
+  var selection = mylist.options[mylist.selectedIndex].text;
+
+  var xlabel = 'Time';
+  var ylabel = selection;
+  if (selection === 'true positive') {
+    plot_data(data, id('arrival_time'), id('TruePositive'), xlabel, ylabel);
+  } else if (selection === "false negative") {
+    plot_data(data, id('arrival_time'), id('FalseNegative'), xlabel, ylabel);
+  } else if (selection === "precision") {
+    var ylabel = 'Precision';
+    plot_data(data, id('arrival_time'), div(id('TruePositive'), id('Passed')), xlabel, ylabel);
+  } else if (selection === "recall") {
+    var ylabel = "Recall";
+    plot_data(data, id('arrival_time'), div(id('TruePositive'), sum(id('TruePositive'), id('FalseNegative'))), xlabel, ylabel);
+  } else if (selection === "pass rate") {
+    var ylabel = 
+    plot_data(data, id('arrival_time'), div(id('Passed'), id('Searched')), xlabel, ylabel)
+  } else {
+    console.log("Invalid selection!");
+    console.log(selection);
+  }
+}
 
 
 
