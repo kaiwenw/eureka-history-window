@@ -91,16 +91,33 @@ var svg = d3.select("#history_plots")
 
 var data = {{ stat_series | tojson | safe }};
 
-function plot_data(data, xaxis, yaxis) {
-  svg.append("text")
-        .attr("x", (width / 2))             
-        .attr("y", 0 - (margin.top / 2))
-        .attr("text-anchor", "middle")  
-        .text(xaxis + " v. " + yaxis);
+function id(key) {
+  return function(d) {return d[key]; };
+}
+
+// takes in functions
+function div(num, denom) {
+  return function(d) {
+    return denom(d) > 0 ? num(d)/denom(d) : 0; 
+  };
+}
+
+function sum(s1, s2) {
+  return function(d) {
+    return s1(d)+s2(d);
+  }
+}
+
+function plot_data(data, xfn, yfn) {
+  // svg.append("text")
+  //       .attr("x", (width / 2))             
+  //       .attr("y", 0 - (margin.top / 2))
+  //       .attr("text-anchor", "middle")  
+  //       .text(xaxis + " v. " + yaxis);
 
   // Add X axis --> it is a date format
   var x = d3.scaleTime()
-    .domain(d3.extent(data, function(d) { return d[xaxis]; }))
+    .domain(d3.extent(data, xfn))
     .range([ 0, width ]);
   svg.append("g")
     .attr("transform", "translate(0," + height + ")")
@@ -108,7 +125,7 @@ function plot_data(data, xaxis, yaxis) {
 
   // Add Y axis
   var y = d3.scaleLinear()
-    .domain([0, d3.max(data, function(d) { return +d[yaxis]; })])
+    .domain([0, d3.max(data, yfn)])
     .range([ height, 0 ]);
   svg.append("g")
     .call(d3.axisLeft(y));
@@ -120,11 +137,21 @@ function plot_data(data, xaxis, yaxis) {
     .attr("stroke", "steelblue")
     .attr("stroke-width", 1.5)
     .attr("d", d3.line()
-      .x(function(d) { return x(d[xaxis]) })
-      .y(function(d) { return y(d[yaxis]) })
-    )
+      .x(function(d) { return x(xfn(d)); })
+      .y(function(d) { return y(yfn(d)); })
+    );
 }
 
-plot_data(data, "arrival_time", "TruePositive");
+// plot_data(data, id('arrival_time'), id('TruePositive'));
+// precision
+// plot_data(data, id('arrival_time'), div(id('TruePositive'), id('Passed')));
+// recall
+// plot_data(data, id('arrival_time'), div(id('TruePositive'), sum(id('TruePositive'), id('FalseNegative'))));
+// pass rate
+plot_data(data, id('arrival_time'), div(id('Passed'), id('Searched')))
+
+
+
+
 </script>
 </html>
