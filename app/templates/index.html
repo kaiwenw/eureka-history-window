@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
+    <script src="https://d3js.org/d3.v4.js"></script>
     <style>
       * {
         font-size: 20px;
@@ -11,39 +12,119 @@
         padding-right: 10px;
         text-align: center;
       }
+      svg {
+        display: block;
+        margin: 0 auto;
+      }
     </style>
     <title>Eureka History Window</title>
   </head>
   <body>
     <table border=1 frame=void rules=rows>
       <tr>
+        <td>Session</td>
         <td>Timestamp</td>
-        <td>NodeType</td>
         <td>Predicates</td>
-        <td>Replay</td>
+
+        {% for stat_key in rows['0']['stats'].keys() %}
+          <td>{{ stat_key }}</td>
+        {% endfor %}
+
       </tr>
-    {% for row in rows %}
+    {% for sess_num, row in rows.items() %}
     <tr>
-        <td>{{ row.timestamp }}</td>
-        <td>{{ row.type }}</td>
         <td>
-          <ol>
-            {% for predicates in row.predicates %}
-            <li>{{ predicates }}</li>
-            {% endfor %}
-            <br><br>
-            <a href="/download/{{row.sess_num}}/{{row.type}}" target="blank">
-              <button class='btn btn-default'>Download Predicates!</button>
-            </a>
-          </ol>
-        </td>
-        <td>
-          <a href="/replay/{{row.sess_num}}" target="blank">
+          <br>
+          Num: {{ sess_num }}<br>
+          Type: {{ row.type }}<br>
+          <br>
+          <a href="/replay/{{sess_num}}" target="blank">
             <button class='btn btn-default'>Replay</button>
           </a>
         </td>
+        <td>
+          {{ row.start_time }}<br>
+                Until...<br>
+          {{ row.end_time }}
+        </td>
+        <td>
+            {% for pred in row.predicates %}
+            + {{ pred.instanceName }}<br>
+              Pos: {{ pred.numPositives }}, Neg: {{ pred.numNegatives }}<br>
+            {% endfor %}
+            <br>
+            <a href="/download/{{sess_num}}" target="blank">
+              <button class='btn btn-default'>Download Predicates!</button>
+            </a>
+        </td>
+
+        {% for stat_key, stat_val in row['stats'].items() %}
+          <td>{{ stat_val }}</td>
+        {% endfor %}
     </tr>
     {% endfor %}
     </table>
+
+    <br>
+    <br>
+    <br>
+    <br>
+    <div id="history_plots">
+
+    </div>
   </body>
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 50, right: 30, bottom: 30, left: 60},
+    width = 460 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svg = d3.select("#history_plots")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+var data = {{ stat_series | tojson | safe }};
+
+function plot_data(data, xaxis, yaxis) {
+  svg.append("text")
+        .attr("x", (width / 2))             
+        .attr("y", 0 - (margin.top / 2))
+        .attr("text-anchor", "middle")  
+        .text(xaxis + " v. " + yaxis);
+
+  // Add X axis --> it is a date format
+  var x = d3.scaleTime()
+    .domain(d3.extent(data, function(d) { return d[xaxis]; }))
+    .range([ 0, width ]);
+  svg.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x));
+
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, d3.max(data, function(d) { return +d[yaxis]; })])
+    .range([ height, 0 ]);
+  svg.append("g")
+    .call(d3.axisLeft(y));
+
+  // Add the line
+  svg.append("path")
+    .datum(data)
+    .attr("fill", "none")
+    .attr("stroke", "steelblue")
+    .attr("stroke-width", 1.5)
+    .attr("d", d3.line()
+      .x(function(d) { return x(d[xaxis]) })
+      .y(function(d) { return y(d[yaxis]) })
+    )
+}
+
+plot_data(data, "arrival_time", "TruePositive");
+</script>
 </html>

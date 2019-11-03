@@ -16,7 +16,10 @@
   </head>
   <body>
     {% for num,img in imgs.items() %}
-      <img src="{{ url_for('static', filename='%d/thumbnail/%d.jpeg' % (sess_num, num)) }}" alt="thumbnail">
+      <div style="float:left; width:33%">
+      <img src="{{ url_for('static', filename='%d/thumbnail/%d.jpeg' % (sess_num, num)) }}" 
+      alt="thumbnail">
+      </div>
     {% endfor %}
     </table>
   </body>
