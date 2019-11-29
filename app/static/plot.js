@@ -57,23 +57,6 @@ function plot_data(data, xfn, xlabel, yfn, ylabel) {
 }
 
 
-// method called when selection changes, to plot the selected curve
-function plotDataSelector(data) {
-  if (data == null) {
-    console.log("no data!");
-    return;
-  }
-  svg.selectAll('*').remove();
-  var mylist = document.getElementById('select_plot')
-  var selection = mylist.options[mylist.selectedIndex].text;
-  plot_data(data, function(d) {return d['metadata']['arrival_time']; }, 'Time',
-                  function(d) {return d['derived_stats'][selection]; }, selection)
-}
-
-
-
-
-
 
 
 

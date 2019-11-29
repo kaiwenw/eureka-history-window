@@ -4,17 +4,8 @@ from flask import redirect, request, render_template, send_from_directory, jsoni
 from app import app
 from app.logs import *
 
-
-@app.route('/', methods=['GET', 'POST'])
-def new_folder():
-    print(request)
-    if request.method == 'POST':
-        print("post", request.url);
-        print(dir(request))
-        print(request.form)
-        print(request.form['new_root_path'])
-        # return redirect(request.url)
-    return index()
+app.config['LOG_FOLDER'] = None
+app.config['CURRENT_SESSION_NAME'] = None
 
 '''
 For loading the replay page
@@ -61,7 +52,29 @@ def refresh_plot():
     print("Refreshing plots with " + str(len(stat_series)))
     return jsonify(stat_series)
 
+
+# just update 
+@app.route('/update_log_folder/<path:session_name>')
+def update_log_folder(session_name):
+    print("Updated with ", session_name)
+    app.config["CURRENT_SESSION_NAME"] = session_name
+    app.config["LOG_FOLDER"] = os.path.join(app.config['ROOT_FOLDER'], session_name)
+
+
 @app.route('/')
 def index():
-    rows = process_data(app.config["LOG_FOLDER"])
-    return render_template('index.html', rows=rows) # , stat_series=stat_series)
+    candidates = get_all_files(app.config["ROOT_FOLDER"])
+    print("candidates: ", candidates)
+    if (app.config["LOG_FOLDER"] is None and len(candidates) > 0):
+        update_log_folder(candidates[0])
+
+    rows = None
+    if (app.config["LOG_FOLDER"]):
+        rows = process_data(app.config["LOG_FOLDER"])
+        print(len(rows))
+
+    # must be in valid candidates
+    if not app.config["CURRENT_SESSION_NAME"] is None:
+        assert(app.config["CURRENT_SESSION_NAME"] in candidates)
+
+    return render_template('index.html', session_name=app.config["CURRENT_SESSION_NAME"], rows=rows, candidate_logs=candidates)

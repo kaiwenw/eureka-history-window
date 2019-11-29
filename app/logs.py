@@ -5,9 +5,40 @@ from collections import OrderedDict
 # given folder with files of form int.*, return a numerically
 # sorted version of listdir.
 def get_sorted_num_files(folder):
+    assert(os.path.isdir(folder))
     filtered_folder = filter(lambda p: p.split('.')[0].isdigit(), os.listdir(folder))
     mapped_folder = map(lambda x: int(x.split('.')[0]), filtered_folder)
     return sorted(mapped_folder)
+
+def get_sorted_subfolders(folder):
+    assert(os.path.isdir(folder))
+    filtered_folder = filter(lambda p: p.isdigit(), os.listdir(folder))
+    mapped_folder = map(lambda x: int(x), filtered_folder)
+    return sorted(mapped_folder)
+
+# very preliminary search for some potentially viable paths
+def get_all_files(search_from_path, depth = 2):
+    assert(os.path.isdir(search_from_path) and depth >= 0)
+    res = []
+    for file in os.listdir(search_from_path):
+        new_path = os.path.join(search_from_path, file)
+        if (not os.path.isdir(new_path)):   continue
+        # it is a candidate if it has a direct subfolder of 0, 1, 2...
+        sorted_subfolders = get_sorted_subfolders(new_path)
+        if (len(sorted_subfolders) > 0):
+            good = True
+            for i in range(len(sorted_subfolders)):
+                if not (i in sorted_subfolders):
+                    good = False
+                    print(i, "not in", sorted_subfolders)
+                    break
+            if (good):
+                print(sorted_subfolders, "good", new_path)
+                res.append(new_path.split('/')[-1])
+
+        if (depth >= 1):
+            res.extend(get_all_files(new_path, depth-1))
+    return res
 
 '''
 Return a mapping of absolute time (ms) to an OrderedDict of 
@@ -94,7 +125,7 @@ def process_data(root_dir):
     print("Processing data from %s" % root_dir)
     try:
         rows = []
-        for sess_num in get_sorted_num_files(root_dir):
+        for sess_num in get_sorted_subfolders(root_dir):
             sess_dir = os.path.join(root_dir, str(sess_num))
 
             row = OrderedDict()
