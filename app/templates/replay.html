@@ -15,11 +15,9 @@
     <title>Eureka Replay</title>
   </head>
   <body>
-    {% for num,img in imgs.items() %}
-      <div style="float:left; width:33%">
-      <img src="{{ url_for('static', filename='%d/thumbnail/%d.jpeg' % (sess_num, num)) }}" 
-      alt="thumbnail">
-      </div>
+    {% for img in per_img %}
+      <!-- <div style="float:left"> -->
+      <img src="{{ url_for('replay_img', filename=img['img_path']) }}" alt="thumbnail"> 
     {% endfor %}
     </table>
   </body>

@@ -1,0 +1,1 @@
+LOG_FOLDER = "/Users/kevinwang/Desktop/eureka-history-window/data/lotus_histories"
