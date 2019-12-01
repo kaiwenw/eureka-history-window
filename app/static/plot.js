@@ -1,3 +1,5 @@
+// number of x axis ticks
+var NUM_XTICKS = 6;
 
 // set the dimensions and margins of the graph
 var margin = {top: 50, right: 30, bottom: 30, left: 80},
@@ -15,18 +17,20 @@ var svg = d3.select("#history_plots")
 
 function plot_data(data, xfn, xlabel, yfn, ylabel) {
   svg.append("text")
-        .attr("x", (width / 2))             
+        .attr("x", (width / 2))
         .attr("y", 0 - (margin.top / 2))
-        .attr("text-anchor", "middle")  
+        .attr("text-anchor", "middle")
         .text(xlabel + " v. " + ylabel);
 
   // Add X axis --> it is a date format
   var x = d3.scaleTime()
     .domain(d3.extent(data, xfn))
     .range([ 0, width ]);
+
   svg.append("g")
     .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x));
+    .call(d3.axisBottom(x)
+        .ticks(NUM_XTICKS));
 
   // Add Y axis
   var y = d3.scaleLinear()
@@ -36,9 +40,9 @@ function plot_data(data, xfn, xlabel, yfn, ylabel) {
     .call(d3.axisLeft(y));
 
     // text label for the x axis
-  svg.append("text")             
+  svg.append("text")
       .attr("transform",
-            "translate(" + (width/2) + " ," + 
+            "translate(" + (width/2) + " ," +
                            (height + margin.top + 20) + ")")
       .style("text-anchor", "middle")
       .text("Date");
