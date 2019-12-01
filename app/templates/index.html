@@ -10,8 +10,8 @@
   <body>
 
     <div style="float:left; width:25%">
-      <h1>Currently showing {{ session_name }}.</h1> 
-      <form> 
+      <h1>Currently showing {{ session_name }}.</h1>
+      <form>
         Select a folder to analyze:
         <select value={{session_name}}, id='select_log' onchange='refreshPage()'>
         {% for log_name in candidate_logs %}
@@ -31,7 +31,7 @@
     <br>
 
 
-  {% if rows is defined and rows | length > 0 %}
+  {% if rows is defined and rows != None and rows | length > 0 %}
     <table border=1 frame=void rules=rows>
     <!-- headers -->
     <tr>
@@ -50,8 +50,8 @@
     <tr>
         <td>
           <br>
-          Session Num: {{ i }}<br>
-          Type: {{ rows[i]['info']['type'] }}<br>
+          Num: {{ i }}<br>
+          Type: {{ rows[i]['start_info']['session_type'] }}<br>
           <br>
           <a href="/replay/{{i}}" target="blank">
             <button class='btn btn-default'>Replay</button>
@@ -64,8 +64,8 @@
         </td> -->
         <td>
             {% for pred in rows[i]['predicates'] %}
-            - {{ pred.instanceName }}<br>
-              Pos: {{ pred.numPositives }}, Neg: {{ pred.numNegatives }}<br>
+            - {{ pred.predicateName }}<br>
+              Pos: {{ pred.dataZipState.folderCount.positive }}, Neg: {{ pred.dataZipState.folderCount.negative }}<br>
             {% endfor %}
             <br>
             <a href="/download/{{i}}" target="blank">
@@ -89,9 +89,9 @@
     <br>
     <br>
     <div style="float:left; width:25%">
-      <form> 
+      <form>
         <!-- Each parameter is a field of derived stats -->
-        Select a parameter to plot time-series: 
+        Select a parameter to plot time-series:
         <select id='select_plot' onchange='plotDataSelector()'>
         {% for stat_key, stat_val in rows[0]['per_img'][0]['derived_stats'].items() %}
           {% if 'elapsed_time' not in stat_key %}
@@ -107,7 +107,7 @@
   {% endif %}
 
   </body>
-<script src={{ url_for('static', filename='plot.js') }}></script>  
+<script src={{ url_for('static', filename='plot.js') }}></script>
 <script>
 
 
@@ -131,13 +131,13 @@ function plotDataSelector() {
   svg.selectAll('*').remove();
   var mylist = document.getElementById('select_plot')
   var selection = mylist.options[mylist.selectedIndex].text;
-  plot_data(data, function(d) {return d['metadata']['arrival_time']; }, 'Time',
+  plot_data(data, function(d) {return d['metadata']['arrival_time(ms)']; }, 'Time',
                   function(d) {return d['derived_stats'][selection]; }, selection)
 }
 
 function refreshPlot() {
   var req = new XMLHttpRequest();
-  req.open('GET', '/refresh_plot', false);
+  req.open('GET', '/refresh_plot', true);
   req.onreadystatechange = function(e) {
     if(req.readyState !== 4) {
         return;
@@ -154,9 +154,10 @@ function refreshPlot() {
 
 // refresh plot every 1s
 refreshPlot();
-// setInterval(function() {
-//   refreshPlot();
-// }, 10000);  
+
+setInterval(function() {
+  refreshPlot();
+}, 5000);
 
 </script>
 

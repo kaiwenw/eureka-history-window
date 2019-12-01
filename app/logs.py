@@ -5,7 +5,8 @@ from collections import OrderedDict
 # given folder with files of form int.*, return a numerically
 # sorted version of listdir.
 def get_sorted_num_files(folder):
-    assert(os.path.isdir(folder))
+    if not os.path.isdir(folder):
+        return []
     filtered_folder = filter(lambda p: p.split('.')[0].isdigit(), os.listdir(folder))
     mapped_folder = map(lambda x: int(x.split('.')[0]), filtered_folder)
     return sorted(mapped_folder)
@@ -17,8 +18,10 @@ def get_sorted_subfolders(folder):
     return sorted(mapped_folder)
 
 # very preliminary search for some potentially viable paths
-def get_all_files(search_from_path, depth = 2):
-    assert(os.path.isdir(search_from_path) and depth >= 0)
+def get_all_files(root_folder, search_from_path, depth = 2):
+    assert(depth >= 0)
+    if (not os.path.isdir(search_from_path)):
+        return []
     res = []
     for file in os.listdir(search_from_path):
         new_path = os.path.join(search_from_path, file)
@@ -33,33 +36,36 @@ def get_all_files(search_from_path, depth = 2):
                     print(i, "not in", sorted_subfolders)
                     break
             if (good):
-                print(sorted_subfolders, "good", new_path)
-                res.append(new_path.split('/')[-1])
+                assert(new_path[:len(root_folder)] == root_folder)
+                rest = new_path[len(root_folder):]
+                print(sorted_subfolders, "good", new_path, rest)
+                res.append(rest)
 
         if (depth >= 1):
-            res.extend(get_all_files(new_path, depth-1))
+            res.extend(get_all_files(root_folder, new_path, depth-1))
     return res
 
 '''
-Return a mapping of absolute time (ms) to an OrderedDict of 
+Return a mapping of absolute time (ms) to an OrderedDict of
 - id
 - label
 while verifying that the times are indeed sequential
 '''
 def load_feedbacks_csv(csv_path):
     result = OrderedDict()
-    last_time = None
-    for idx, row in pandas.read_csv(csv_path).iterrows():
-        entry = OrderedDict()
-        entry['id'] = row['id']
-        entry['label'] = row['feedback_label']
-        cur_time = int(row['absolute time(ms)'])
-        result[cur_time] = entry
-        if (last_time is None):
-            last_time = cur_time
-        else:
-            assert(last_time < cur_time)
-            last_time = cur_time
+    if os.path.isfile(csv_path):
+        last_time = None
+        for idx, row in pandas.read_csv(csv_path).iterrows():
+            entry = OrderedDict()
+            entry['id'] = row['id']
+            entry['label'] = row['feedback_label']
+            cur_time = int(row['absolute time(ms)'])
+            result[cur_time] = entry
+            if (last_time is None):
+                last_time = cur_time
+            else:
+                assert(last_time < cur_time)
+                last_time = cur_time
     return result
 
 def float_div(num, denom):
@@ -69,7 +75,7 @@ def float_div(num, denom):
 
 
 '''
-Get all the metadata given the root_dir. 
+Get all the metadata given the root_dir.
 Expects the following directory tree with S sessions
 root_dir
     |
@@ -79,8 +85,9 @@ root_dir
     .
     |----i/
     |    |
-    |    |----i.hyperfindsearch
-    |    |----info.json
+    |    |----pred.hyperfindsearch
+    |    |----start_info.json
+    |    |----end_info.json
     |    |----feedback.csv
     |    |----metadata/
     |    |       |
@@ -97,7 +104,8 @@ The result will be an array A where A[i] is an OrderedDict for the ith session.
 A[i] will contain:
 - 'predicates' is a list of dictionaries representing the predicates
 - 'predicate_path' is the path to the predicate
-- 'info' is an OrderedDict representing info.json
+- 'start_info' is path to the info logged at start of session
+- 'end_info' is path to info logged at end of session
 - 'derived_info' is an OrderedDict representing derived information from info
     - involving start_time and end_time formatted
 - 'feedback' an OrderedDict representing feedbacks.csv
@@ -107,7 +115,7 @@ A[i] will contain:
     - 'stats' field contains an OrderedDict of stat jsons
     - 'img_path' field contains the path to this image
     - 'derived_stats' field contains an OrderedDict of derived statistics. This
-    is for plotting as well as the table. Some are just renamings of 'stats' to 
+    is for plotting as well as the table. Some are just renamings of 'stats' to
     be consistent.
         - 'items_processed' = 'Searched'
         - 'items_shown' = 'Passed'
@@ -130,22 +138,20 @@ def process_data(root_dir):
 
             row = OrderedDict()
             # predicate path
-            pred_path = os.path.join(sess_dir, "%d.hyperfindsearch" % sess_num)
+            pred_path = os.path.join(sess_dir, "pred.hyperfindsearch")
             row['predicate_path'] = pred_path
             with open(pred_path, 'r') as f:
                 row['predicates'] = json.load(f)
 
             # read the info.json file
-            info_path = os.path.join(sess_dir, 'info.json')
-            with open(info_path, 'r') as f:
-                row['info'] = OrderedDict(json.load(f))
-            sess_start_time = int(row['info']['start_time(ms)'])
-            sess_end_time = int(row['info']['end_time(ms)'])
+            start_info_path = os.path.join(sess_dir, 'start_info.json')
+            with open(start_info_path, 'r') as f:
+                row['start_info'] = OrderedDict(json.load(f))
 
-            derived_info = OrderedDict()
-            derived_info['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(sess_start_time/1000))
-            derived_info['end_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(sess_end_time/1000))
-            row['derived_info'] = derived_info
+            sess_start_time = int(row['start_info']['start_time(ms)'])
+
+            row['derived_info'] = OrderedDict()
+            row['derived_info']['start_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(sess_start_time/1000))
 
             # temporary feedback mapping of time -> label + id
             feedback_path = os.path.join(sess_dir, 'feedback.csv')
@@ -203,27 +209,42 @@ def process_data(root_dir):
                 with open(stat_path, 'r') as f:
                     cur_img['stats'] = OrderedDict(json.load(f))
 
-                ### FIXME: now is relative figure out how to do absolute
-                # cur_img['img_path'] = "file://" + os.path.join(img_dir, "%d.jpeg" % img_num)
+                # relative image page
                 cur_img['img_path'] = "%d/thumbnail/%d.jpeg" % (sess_num, img_num)
 
-                cur_img['derived_stats'] = calc_derived_stats(cur_img['stats'], int(cur_img['metadata']['arrival_time']))
+                cur_img['derived_stats'] = calc_derived_stats(cur_img['stats'], int(cur_img['metadata']['arrival_time(ms)']))
                 per_img.append(cur_img)
 
-            # there may be feedbacks in this session despite having seen the last image
-            # the last data point is using info from info.json
-            last_elem = OrderedDict()
-            last_elem['metadata'] = OrderedDict()
-            # emulate the last arrival
-            last_elem['metadata']['arrival_time'] = sess_end_time
-            last_elem['derived_stats'] = calc_derived_stats(row['info'], sess_end_time)
-            assert(cur_feedback_idx == len(time2feedback))
+            end_info_path = os.path.join(sess_dir, 'end_info.json')
+            assert(cur_feedback_idx <= len(time2feedback))
+            if (os.path.isfile(end_info_path)):
+                with open(end_info_path, 'r') as f:
+                    row['end_info'] = OrderedDict(json.load(f))
+                sess_end_time = int(row['end_info']['end_time(ms)'])
+                row['derived_info']['end_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(sess_end_time/1000))
 
-            per_img.append(last_elem)
+                # there may be feedbacks in this session despite having seen the last image
+                # the last data point is using info from info.json
+                last_elem = OrderedDict()
+                last_elem['metadata'] = OrderedDict()
+                # emulate the last arrival
+                last_elem['metadata']['arrival_time(ms)'] = sess_end_time
+                last_elem['derived_stats'] = calc_derived_stats(row['end_info'], sess_end_time)
+                per_img.append(last_elem)
+
+                assert(cur_feedback_idx == len(time2feedback))
+            row['positive_ids'] = pos_feedback_set
+            row['negative_ids'] = neg_feedback_set
             row['per_img'] = per_img
             rows.append(row)
         return rows
 
-    except OSError:
-        print("File does not exist!")
+    except OSError as e:
+        print(e)
+        return None
+    except KeyError as e:
+        print("Key not found: ", e)
+        return None
+    except json.decoder.JSONDecodeError as e:
+        print("Json failed to decode", e)
         return None
