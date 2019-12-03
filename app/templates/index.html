@@ -40,9 +40,11 @@
       <td>Predicates</td>
 
       <!-- statistics -->
-      {% for stat_key in rows[0]['per_img'][0]['derived_stats'].keys() %}
-        <td>{{ stat_key }}</td>
-      {% endfor %}
+      {% if stat_keys is defined and stat_keys != None %}
+          {% for stat_key in stat_keys %}
+            <td>{{ stat_key }}</td>
+          {% endfor %}
+       {% endif %}
     </tr>
 
     <!-- data per row -->
@@ -64,8 +66,10 @@
         </td> -->
         <td>
             {% for pred in rows[i]['predicates'] %}
-            - {{ pred.predicateName }}<br>
-              Pos: {{ pred.dataZipState.folderCount.positive }}, Neg: {{ pred.dataZipState.folderCount.negative }}<br>
+                {% if pred.dataZipState is defined and pred.dataZipState.folderCount is defined %}
+                    - {{ pred.predicateName }}<br>
+                      Pos: {{ pred.dataZipState.folderCount.positive }}, Neg: {{ pred.dataZipState.folderCount.negative }}<br>
+                {% endif %}
             {% endfor %}
             <br>
             <a href="/download/{{i}}" target="blank">
@@ -74,14 +78,16 @@
         </td>
 
         <!-- statistics data for last one (overall) -->
-        {% for stat_key, stat_val in rows[i]['per_img'][-1]['derived_stats'].items() %}
-        <!-- hacky check for whether it's a float -->
-        {% if (stat_val | int) != stat_val %}
-          <td>{{ "%.3f" | format(stat_val) }}</td>
-        {% else %}
-          <td>{{ stat_val }}</td>
+        {% if (rows[i]['per_img'] is defined) and ((rows[i]['per_img']|length) > 0) %}
+            {% for stat_key, stat_val in rows[i]['per_img'][-1]['derived_stats'].items() %}
+                <!-- hacky check for whether it's a float -->
+                {% if (stat_val | int) != stat_val %}
+                  <td>{{ "%.3f" | format(stat_val) }}</td>
+                {% else %}
+                  <td>{{ stat_val }}</td>
+                {% endif %}
+            {% endfor %}
         {% endif %}
-        {% endfor %}
     </tr>
     {% endfor %}
     </table>

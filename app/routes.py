@@ -43,14 +43,15 @@ def get_stat_series(rows):
     stat_series = []
     # at the end of each row, add a zero point
     for row in rows:
-        stat_series.extend(row['per_img'])
-        zero_entry = OrderedDict()
-        zero_entry['metadata'] = OrderedDict()
-        zero_entry['metadata']['arrival_time(ms)'] = row['per_img'][-1]['metadata']['arrival_time(ms)']
-        zero_entry['derived_stats'] = OrderedDict()
-        for k in row['per_img'][-1]['derived_stats']:
-            zero_entry['derived_stats'][k] = 0;
-        stat_series.append(zero_entry)
+        if (len(row['per_img']) > 0):
+            stat_series.extend(row['per_img'])
+            zero_entry = OrderedDict()
+            zero_entry['metadata'] = OrderedDict()
+            zero_entry['metadata']['arrival_time(ms)'] = row['per_img'][-1]['metadata']['arrival_time(ms)']
+            zero_entry['derived_stats'] = OrderedDict()
+            for k in row['per_img'][-1]['derived_stats']:
+                zero_entry['derived_stats'][k] = 0;
+            stat_series.append(zero_entry)
     return stat_series
 
 @app.route('/refresh_plot')
@@ -74,19 +75,29 @@ def update_log_folder(session_name):
     app.config["LOG_FOLDER"] = os.path.join(app.config['ROOT_FOLDER'], session_name)
     return index()
 
+def reset_states():
+    app.config['LOG_FOLDER'] = None
+    app.config['CURRENT_SESSION_NAME'] = None
+
+def invalid_session():
+    return app.config['LOG_FOLDER'] is None or app.config['CURRENT_SESSION_NAME'] is None
+
 @app.route('/')
 def index():
     candidates = get_all_files(app.config["ROOT_FOLDER"], app.config["ROOT_FOLDER"])
+    if len(candidates) == 0:
+        return render_template('index.html')
+
     print("candidates: ", candidates)
-    if (app.config["LOG_FOLDER"] is None and len(candidates) > 0):
+    if invalid_session() or app.config['CURRENT_SESSION_NAME'] not in candidates:
         update_log_folder(candidates[0])
 
     rows = None
+    stat_keys = None
     if (app.config["LOG_FOLDER"] and os.path.isdir(app.config["LOG_FOLDER"])):
         rows = process_data(app.config["LOG_FOLDER"])
 
-    # must be in valid candidates
-    if not app.config["CURRENT_SESSION_NAME"] is None:
-        assert(app.config["CURRENT_SESSION_NAME"] in candidates)
+    if rows is not None and len(rows) > 0 and len(rows[0]['per_img']) > 0:
+        stat_keys = rows[0]['per_img'][0]['derived_stats'].keys()
 
-    return render_template('index.html', session_name=app.config["CURRENT_SESSION_NAME"], rows=rows, candidate_logs=candidates)
+    return render_template('index.html', session_name=app.config["CURRENT_SESSION_NAME"], rows=rows, candidate_logs=candidates, stat_keys=stat_keys)
