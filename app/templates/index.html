@@ -36,7 +36,6 @@
     <!-- headers -->
     <tr>
       <td>Session</td>
-      <!-- <td>Timestamp</td> -->
       <td>Predicates</td>
 
       <!-- statistics -->
@@ -50,6 +49,7 @@
     <!-- data per row -->
     {% for i in range(rows | length) %}
     <tr>
+        <!-- session metadata -->
         <td>
           <br>
           Num: {{ i }}<br>
@@ -59,11 +59,8 @@
             <button class='btn btn-default'>Replay</button>
           </a>
         </td>
-        <!-- <td>
-          {{ rows[i]['derived_info']['start_time'] }}<br>
-                Until...<br>
-          {{ rows[i]['derived_info']['end_time'] }}
-        </td> -->
+
+        <!-- predicate metadata and download -->
         <td>
             {% for pred in rows[i]['predicates'] %}
                 {% if pred.dataZipState is defined and pred.dataZipState.folderCount is defined %}
@@ -72,14 +69,14 @@
                 {% endif %}
             {% endfor %}
             <br>
-            <a href="/download/{{i}}" target="blank">
+            <a href="/download_predicate/{{i}}" target="blank">
               <button class='btn btn-default'>Download Predicates!</button>
             </a>
         </td>
 
         <!-- statistics data for last one (overall) -->
-        {% if (rows[i]['per_img'] is defined) and ((rows[i]['per_img']|length) > 0) %}
-            {% for stat_key, stat_val in rows[i]['per_img'][-1]['derived_stats'].items() %}
+        {% if rows[i]['end_stats'] is defined %}
+            {% for stat_key, stat_val in rows[i]['end_stats']['derived_stats'].items() %}
                 <!-- hacky check for whether it's a float -->
                 {% if (stat_val | int) != stat_val %}
                   <td>{{ "%.3f" | format(stat_val) }}</td>

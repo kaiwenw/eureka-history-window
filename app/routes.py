@@ -6,59 +6,50 @@ from app.logs import *
 
 app.config["LOG_FOLDER"] = None
 app.config["CURRENT_SESSION_NAME"] = None
-app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+# app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
-"""
-For loading the replay page
-"""
+################################
+######## SESSION STATES ########
+################################
 
+def reset_states():
+    app.config["LOG_FOLDER"] = None
+    app.config["CURRENT_SESSION_NAME"] = None
 
-@app.route("/replay/<int:sess_num>")
-def replay(sess_num):
-    if app.config["LOG_FOLDER"] is None:
-        print("No log folder, defaulting to index")
-        return index()
-
-    rows = process_data(app.config["LOG_FOLDER"])
-    # ignore last one since that's only metadata
-    per_img = rows[sess_num]["per_img"][:-1]
-    pos_ids = rows[sess_num]["positive_ids"]
-    neg_ids = rows[sess_num]["negative_ids"]
-    # print(pos_ids);
-    return render_template(
-        "replay.html", per_img=per_img, pos_ids=pos_ids, neg_ids=neg_ids
+def invalid_session():
+    return (
+        app.config["LOG_FOLDER"] is None or app.config["CURRENT_SESSION_NAME"] is None
     )
 
-
-"""
-For serving images!
-"""
-
-
-@app.route("/replay_img/<path:filename>")
-def replay_img(filename):
-    return send_from_directory(app.config["LOG_FOLDER"], filename)
+@app.route("/update_log_folder/<path:session_name>")
+def update_log_folder(session_name):
+    print("Updated with ", session_name)
+    app.config["CURRENT_SESSION_NAME"] = session_name
+    app.config["LOG_FOLDER"] = os.path.join(app.config["ROOT_FOLDER"], session_name)
+    return homepage()
 
 
-@app.route("/download/<int:sess_num>")
-def download(sess_num):
-    path = "%d/pred.hyperfindsearch" % sess_num
-    return send_from_directory(app.config["LOG_FOLDER"], path)
-
+#################################
+########### PLOT ################
+#################################
 
 def get_stat_series(rows):
+    """Helper that formats statistics into a list-form for D3 plot to consume"""
     stat_series = []
     # at the end of each row, add a zero point
     for row in rows:
-        if len(row["per_img"]) > 0:
-            stat_series.extend(row["per_img"])
+        stat_series.extend(row["per_img"])
+        if "end_stats" in row:
+            # if this exists, add it to the end
+            end_stats = row["end_stats"]
+            stat_series.append(end_stats)
+
+            # also, add a zero point
             zero_entry = OrderedDict()
             zero_entry["metadata"] = OrderedDict()
-            zero_entry["metadata"]["arrival_time(ms)"] = row["per_img"][-1]["metadata"][
-                "arrival_time(ms)"
-            ]
+            zero_entry["metadata"]["arrival_time(ms)"] = end_stats["metadata"]["arrival_time(ms)"]
             zero_entry["derived_stats"] = OrderedDict()
-            for k in row["per_img"][-1]["derived_stats"]:
+            for k in end_stats["derived_stats"]:
                 zero_entry["derived_stats"][k] = 0
             stat_series.append(zero_entry)
     return stat_series
@@ -66,40 +57,36 @@ def get_stat_series(rows):
 
 @app.route("/refresh_plot")
 def refresh_plot():
+    """Periodically, makes AJAX request to get new updated plot data"""
     stat_series = {}
-    if app.config["LOG_FOLDER"] and os.path.isdir(app.config["LOG_FOLDER"]):
-        rows = process_data(app.config["LOG_FOLDER"])
-        if rows is None:
-            print(app.config["LOG_FOLDER"], "resulted in none rows")
-            return jsonify({})
-        stat_series = get_stat_series(rows)
-        print("Refreshing plots with " + str(len(stat_series)))
+    if app.config["LOG_FOLDER"] is None or not os.path.isdir(app.config["LOG_FOLDER"]):
+        print("invalid log folder:", app.config["LOG_FOLDER"])
+        return jsonify({})
+    rows = process_data(app.config["LOG_FOLDER"])
+    if rows is None:
+        print("invalid results from process data of log folder: ", app.config["LOG_FOLDER"])
+        return jsonify({})
+    stat_series = get_stat_series(rows)
+    print("Refreshing plots with " + str(len(stat_series)))
     return jsonify(stat_series)
 
 
-# just update
-@app.route("/update_log_folder/<path:session_name>")
-def update_log_folder(session_name):
-    print("Updated with ", session_name)
-    app.config["CURRENT_SESSION_NAME"] = session_name
-    app.config["LOG_FOLDER"] = os.path.join(app.config["ROOT_FOLDER"], session_name)
-    return index()
+######################################
+############# MAIN PAGE ##############
+######################################
 
-
-def reset_states():
-    app.config["LOG_FOLDER"] = None
-    app.config["CURRENT_SESSION_NAME"] = None
-
-
-def invalid_session():
-    return (
-        app.config["LOG_FOLDER"] is None or app.config["CURRENT_SESSION_NAME"] is None
-    )
+# download the predicate file
+@app.route("/download_predicate/<int:sess_num>")
+def download_predicate(sess_num):
+    """Serves download predicate request"""
+    path = "%d/pred.hyperfindsearch" % sess_num
+    return send_from_directory(app.config["LOG_FOLDER"], path)
 
 
 @app.route("/")
-def index():
-    candidates = get_all_files(app.config["ROOT_FOLDER"], app.config["ROOT_FOLDER"])
+def homepage():
+    """Loads the main page, with tables and plots, and buttons to replay"""
+    candidates = get_valid_session_paths(app.config["ROOT_FOLDER"])
     if len(candidates) == 0:
         return render_template("index.html")
 
@@ -122,3 +109,32 @@ def index():
         rows=rows,
         stat_keys=stat_keys,
     )
+
+
+
+@app.route("/replay/<int:sess_num>")
+def replay_homepage(sess_num):
+    """Homepage for replay, which sets up the <img> tags to make
+    GET request to replay_img, and also passes the labels
+    """
+    if app.config["LOG_FOLDER"] is None:
+        print("No log folder, defaulting to index")
+        return homepage()
+
+    rows = process_data(app.config["LOG_FOLDER"])
+    per_img = rows[sess_num]["per_img"]
+    pos_ids = rows[sess_num]["positive_ids"]
+    neg_ids = rows[sess_num]["negative_ids"]
+    return render_template(
+        "replay.html",
+        per_img=per_img,
+        pos_ids=pos_ids,
+        neg_ids=neg_ids
+    )
+
+@app.route("/replay_img/<path:filename>")
+def replay_img(filename):
+    """Serves GET request in replay, sending actual thumbnail contents"""
+    return send_from_directory(app.config["LOG_FOLDER"], filename)
+
+
