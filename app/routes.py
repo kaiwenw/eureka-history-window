@@ -1,3 +1,4 @@
+import copy
 import os, json
 from collections import OrderedDict
 from flask import redirect, request, render_template, send_from_directory, jsonify
@@ -6,7 +7,6 @@ from app.logs import *
 
 app.config["LOG_FOLDER"] = None
 app.config["CURRENT_SESSION_NAME"] = None
-# app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 ################################
 ######## SESSION STATES ########
@@ -51,13 +51,8 @@ def get_stat_series(rows):
             stat_series.append(end_stats)
 
             # also, add a zero point
-            zero_entry = OrderedDict()
-            zero_entry["metadata"] = OrderedDict()
-            zero_entry["metadata"]["arrival_time(ms)"] = end_stats["metadata"][
-                "arrival_time(ms)"
-            ]
-            zero_entry["derived_stats"] = OrderedDict()
-            for k in end_stats["derived_stats"]:
+            zero_entry = copy.deepcopy(end_stats)
+            for k in zero_entry["derived_stats"]:
                 zero_entry["derived_stats"][k] = 0
             stat_series.append(zero_entry)
     return stat_series

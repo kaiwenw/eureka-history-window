@@ -56,7 +56,7 @@ function plot_data(data, xfn, xlabel, yfn, ylabel) {
     .attr("d", d3.line()
       .x(function(d) { return x(xfn(d)); })
       .y(function(d) { return y(yfn(d)); })
-      .curve(d3.curveStepBefore)
+      .curve(d3.curveStepAfter)
     );
 }
 

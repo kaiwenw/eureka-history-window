@@ -34,7 +34,7 @@
   {% if rows is defined and rows != None and rows | length > 0 %}
     <table border=1 frame=void rules=rows>
     <!-- headers -->
-    <tr>
+     <tr>
       <td>Session</td>
       <td>Predicates</td>
 
@@ -96,10 +96,8 @@
         <!-- Each parameter is a field of derived stats -->
         Select a parameter to plot time-series:
         <select id='select_plot' onchange='plotDataSelector()'>
-        {% for stat_key, stat_val in rows[0]['per_img'][0]['derived_stats'].items() %}
-          {% if 'elapsed_time' not in stat_key %}
+        {% for stat_key in stat_keys %}
           <option>{{ stat_key }}</option>
-          {% endif %}
         {% endfor %}
         </select>
       </form>
@@ -160,7 +158,7 @@ refreshPlot();
 
 setInterval(function() {
   refreshPlot();
-}, 5000);
+}, 2000);
 
 </script>
 
