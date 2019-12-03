@@ -44,7 +44,8 @@ def get_stat_series(rows):
     stat_series = []
     # at the end of each row, add a zero point
     for row in rows:
-        stat_series.extend(row["per_img"])
+        if "per_img" in row:
+            stat_series.extend(row["per_img"])
         if "end_stats" in row:
             # if this exists, add it to the end
             end_stats = row["end_stats"]
@@ -112,7 +113,23 @@ def homepage():
                 candidates=candidates,
             )
 
-    stat_keys = rows[0]["per_img"][0]["derived_stats"].keys()
+    def get_stat_keys(rows):
+        """Tries to find one row with valid stat keys"""
+        for row in rows:
+            if "per_img" in row:
+                return row["per_img"][0]["derived_stats"].keys()
+        return None
+
+    stat_keys = get_stat_keys(rows)
+    if stat_keys is None:
+        print("No per image data yet!")
+        return render_template(
+            "index.html",
+            session_name=app.config["CURRENT_SESSION_NAME"],
+            candidates=candidates,
+            rows=rows,
+        )
+
     return render_template(
         "index.html",
         session_name=app.config["CURRENT_SESSION_NAME"],
@@ -139,6 +156,9 @@ def replay_homepage(sess_num):
         return homepage()
 
     rows = process_data(app.config["LOG_FOLDER"])
+    if "per_img" not in rows[sess_num]:
+        return render_template("replay.html")
+
     return render_template(
         "replay.html",
         per_img=rows[sess_num]["per_img"],

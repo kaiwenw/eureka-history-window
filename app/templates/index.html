@@ -75,15 +75,22 @@
         </td>
 
         <!-- statistics data for last one (overall) -->
-        {% if rows[i]['end_stats'] is defined %}
-            {% for stat_key, stat_val in rows[i]['end_stats']['derived_stats'].items() %}
-                <!-- hacky check for whether it's a float -->
-                {% if (stat_val | int) != stat_val %}
-                  <td>{{ "%.3f" | format(stat_val) }}</td>
-                {% else %}
-                  <td>{{ stat_val }}</td>
-                {% endif %}
-            {% endfor %}
+        {% if stat_keys is defined and stat_keys != None %}
+            {% if rows[i]['end_stats'] is defined %}
+                {% for stat_key, stat_val in rows[i]['end_stats']['derived_stats'].items() %}
+                    <!-- hacky check for whether it's a float -->
+                    {% if (stat_val | int) != stat_val %}
+                      <td>{{ "%.3f" | format(stat_val) }}</td>
+                    {% else %}
+                      <td>{{ stat_val }}</td>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <!-- if end stats hasn't come out, then not available -->
+                {% for stat_key in stat_keys %}
+                    <td>Session not Stopped</td>
+                {% endfor %}
+            {% endif %}
         {% endif %}
     </tr>
     {% endfor %}
