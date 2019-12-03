@@ -12,14 +12,17 @@ app.config["CURRENT_SESSION_NAME"] = None
 ######## SESSION STATES ########
 ################################
 
+
 def reset_states():
     app.config["LOG_FOLDER"] = None
     app.config["CURRENT_SESSION_NAME"] = None
+
 
 def invalid_session():
     return (
         app.config["LOG_FOLDER"] is None or app.config["CURRENT_SESSION_NAME"] is None
     )
+
 
 @app.route("/update_log_folder/<path:session_name>")
 def update_log_folder(session_name):
@@ -32,6 +35,7 @@ def update_log_folder(session_name):
 #################################
 ########### PLOT ################
 #################################
+
 
 def get_stat_series(rows):
     """Helper that formats statistics into a list-form for D3 plot to consume"""
@@ -47,7 +51,9 @@ def get_stat_series(rows):
             # also, add a zero point
             zero_entry = OrderedDict()
             zero_entry["metadata"] = OrderedDict()
-            zero_entry["metadata"]["arrival_time(ms)"] = end_stats["metadata"]["arrival_time(ms)"]
+            zero_entry["metadata"]["arrival_time(ms)"] = end_stats["metadata"][
+                "arrival_time(ms)"
+            ]
             zero_entry["derived_stats"] = OrderedDict()
             for k in end_stats["derived_stats"]:
                 zero_entry["derived_stats"][k] = 0
@@ -64,7 +70,10 @@ def refresh_plot():
         return jsonify({})
     rows = process_data(app.config["LOG_FOLDER"])
     if rows is None:
-        print("invalid results from process data of log folder: ", app.config["LOG_FOLDER"])
+        print(
+            "invalid results from process data of log folder: ",
+            app.config["LOG_FOLDER"],
+        )
         return jsonify({})
     stat_series = get_stat_series(rows)
     print("Refreshing plots with " + str(len(stat_series)))
@@ -111,7 +120,6 @@ def homepage():
     )
 
 
-
 @app.route("/replay/<int:sess_num>")
 def replay_homepage(sess_num):
     """Homepage for replay, which sets up the <img> tags to make
@@ -126,15 +134,11 @@ def replay_homepage(sess_num):
     pos_ids = rows[sess_num]["positive_ids"]
     neg_ids = rows[sess_num]["negative_ids"]
     return render_template(
-        "replay.html",
-        per_img=per_img,
-        pos_ids=pos_ids,
-        neg_ids=neg_ids
+        "replay.html", per_img=per_img, pos_ids=pos_ids, neg_ids=neg_ids
     )
+
 
 @app.route("/replay_img/<path:filename>")
 def replay_img(filename):
     """Serves GET request in replay, sending actual thumbnail contents"""
     return send_from_directory(app.config["LOG_FOLDER"], filename)
-
-

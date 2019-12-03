@@ -2,30 +2,36 @@ import pandas, pprint
 import os, json, time
 from collections import OrderedDict
 
+
 def sort_numbered_files(folder, ext=""):
     """Return sorted list of subfiles in the form [x]ext
     where x is an integer, and files have given extension
     """
     assert os.path.isdir(folder)
+
     def is_in_format(filename):
         """Returns true if filename is in form [filename]ext"""
-        if not filename.endswith(ext):  return False
-        return filename[:len(filename)-len(ext)].isdigit()
+        if not filename.endswith(ext):
+            return False
+        return filename[: len(filename) - len(ext)].isdigit()
+
     in_format = filter(lambda x: is_in_format(x), os.listdir(folder))
 
     def separate_int(filename):
         """Returns the integer format"""
-        return int(filename[:len(filename)-len(ext)])
+        return int(filename[: len(filename) - len(ext)])
+
     numbered_files = map(lambda x: separate_int(x), in_format)
     return sorted(numbered_files)
 
 
-def get_valid_session_paths(root_folder, depth = 2):
+def get_valid_session_paths(root_folder, depth=2):
     """Return a list of "valid" session paths starting from given root_folder
     and within a specified depth. Since it is expensive to try to process all
     files, we do a crude estimate. Namely, we mark a folder as "valid" if it
     contains subfolders with consecutive numbers (i.e. "0/", "1/", "2/", etc.)
     """
+
     def get_valid_session_paths_(search_from_path, depth):
         """Performs search from given child path"""
         assert depth >= 0
@@ -54,6 +60,7 @@ def get_valid_session_paths(root_folder, depth = 2):
             if depth >= 1:
                 res.extend(get_valid_session_paths_(new_path, depth - 1))
         return res
+
     return get_valid_session_paths_(root_folder, depth)
 
 
